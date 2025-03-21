@@ -1,0 +1,48 @@
+---
+trigger:
+  - none
+
+resources:
+  repositories:
+    - repository: ci-central
+      name: JJsProjects/CiCentral
+      type: git
+      ref: main
+
+schedules:
+  - cron: "0 18 * * 5"
+    displayName: Weekly Friday snyc AZDO to GitHub
+    branches:
+      include:
+        - main
+    always: true
+
+pool:
+  name: jjspool
+  demands:
+    - Agent.OS -equals Linux
+
+variables:
+  - group: GitMirror
+
+stages:
+  - stage: Mirror
+    jobs:
+      - job: Mirror
+        workspace:
+          clean: all
+        steps:
+
+          - template: ci-templates/sonarqube/sonarqube-prepare.yaml@ci-central
+            parameters:
+              context: ''
+              cliProjectKey: 'JJsProjects_GitMirror_AYslfijyWCtMiWwei5lc'
+
+          - bash: |
+              ./git_mirror.sh \
+                $(GitMirror.pat-source) \
+                $(GitMirror.pat-destination)
+            displayName: Run Mirror Script
+            failOnStderr: false
+
+          - template: ci-templates/sonarqube/sonarqube-analyze-publish.yaml@ci-central
