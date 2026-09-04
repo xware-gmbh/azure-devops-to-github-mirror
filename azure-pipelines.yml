@@ -1,0 +1,55 @@
+---
+trigger:
+  - none
+
+resources:
+  repositories:
+    - repository: ci-central
+      name: JJsProjects/CiCentral
+      type: git
+      ref: main
+
+schedules:
+  - cron: "0 18 * * 5"
+    displayName: Weekly Friday snyc AZDO to GitHub
+    branches:
+      include:
+        - main
+    always: true
+
+pool:
+  name: onprem-prd
+  demands:
+    - Agent.OS -equals Linux
+
+variables:
+  - group: GitMirror
+
+stages:
+  - stage: Mirror
+    jobs:
+      - job: Mirror
+        workspace:
+          clean: all
+        steps:
+
+          - template: ci-templates/sonarqube/sonarqube-prepare.yaml@ci-central
+            parameters:
+              context: ''
+              cliProjectKey: 'JJsProjects_GitMirror_AYslfijyWCtMiWwei5lc'
+
+          # Source auth uses the job's own System.AccessToken (short-lived,
+          # scoped to this org, never expires on a calendar) instead of a stored
+          # PAT - one less credential to rotate, and immune to the PAT-length
+          # base64 pitfall. Requires the project build service to have Read on
+          # the mirrored repos. The GitHub side still needs its PAT.
+          - bash: |
+              ./git_mirror.sh \
+                "$SYSTEM_ACCESSTOKEN" \
+                $(GitMirror.pat-destination)
+            displayName: Run Mirror Script
+            failOnStderr: false
+            env:
+              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+          - template: ci-templates/sonarqube/sonarqube-analyze-publish.yaml@ci-central

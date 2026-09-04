@@ -1,0 +1,2 @@
+SourceRepo;SourceBranch;DestinationRepo;DestinationBranch;Email;Name;
+https://organization.visualstudio.com/collection/project/_git/repo;main;organization/repo.git;trunc;jan@jambor.pro;Jan Jambor;
